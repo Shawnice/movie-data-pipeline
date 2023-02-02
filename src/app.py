@@ -1,44 +1,30 @@
 """Module for processing `IMDB` data."""
 
 # Standard library
+import json
 import logging
-import pymysql
+import os
+import urllib.parse
+from typing import Any
 
 # Third-party
-import pandas as pd
-import json
 import boto3
+import pandas as pd
+import pymysql
 from botocore.exceptions import ClientError
-import urllib
-import os
+
+# First-party
+from src import db
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
-
-create_table = """
-CREATE TABLE IF NOT EXISTS imdb (
-    id                  int NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    name                varchar(255),
-    rank_               int,
-    year                int,
-    genre               JSON,
-    director            varchar(120),
-    rating              float(4,2),
-    actors              JSON,
-    CONSTRAINT Unique_Movie UNIQUE(name, year, director)
-);"""
-
-insert_row = """
-INSERT INTO imdb (rank_, name, year, genre, director, rating, actors)
-VALUES (%s, %s, %s, %s, %s, %s, %s)
-ON DUPLICATE KEY UPDATE
-  id = id ;
-"""
+S3Event = dict[str, Any]
 
 
 def get_secret(
     secret_name: str, region_name: str = "us-east-1"
 ) -> dict[str, str]:
+    """Get a secret from Secrets Manager."""
     session = boto3.session.Session()
     client = session.client(
         service_name="secretsmanager", region_name=region_name
@@ -55,13 +41,19 @@ def get_secret(
 IS_PRODUCTION = os.environ.get("IsProduction") == "true"
 DB_HOST = os.environ["DBHost"] if IS_PRODUCTION else "docker.for.mac.localhost"
 DB_NAME = os.environ["DBName"] if IS_PRODUCTION else "mysql"
-DB_USER = os.environ["DBUser"] if IS_PRODUCTION else "root"
-DB_PASSWORD = get_secret() if IS_PRODUCTION else ""
+
+if IS_PRODUCTION:
+    secret = get_secret(os.environ["DBSecretName"])
+    DB_USER = secret["username"]
+    DB_PASSWORD = secret["password"]
+else:
+    DB_USER = "root"
+    DB_PASSWORD = "12345678"  # noqa: S105
 
 s3 = boto3.client("s3")
 
 
-def get_imdb_data(event: dict[str, object]) -> object:
+def get_imdb_data(event: S3Event) -> str:
     """Get `IMDB` data from S3 bucket."""
     bucket = event["Records"][0]["s3"]["bucket"]["name"]
     key = urllib.parse.unquote_plus(
@@ -79,8 +71,8 @@ def get_imdb_data(event: dict[str, object]) -> object:
         raise err
 
 
-def get_mysql_conn():
-    """."""
+def get_mysql_conn() -> pymysql.connect:
+    """Return a `MySQL` connection."""
     return pymysql.connect(
         host=DB_HOST,
         user=DB_USER,
@@ -90,7 +82,7 @@ def get_mysql_conn():
     )
 
 
-def lambda_handler(
+def lambda_imdb(
     event: dict[str, object], context: dict[str, object]
 ) -> dict[str, object]:
     """Lambda function for loading `IMDB` data into database."""
@@ -100,15 +92,15 @@ def lambda_handler(
 
     conn = get_mysql_conn()
     cursor = conn.cursor()
-    cursor.execute(create_table)
+    cursor.execute(db.CREATE_TABLE)
 
     for _, row in df.iterrows():
         insert_data = row.tolist()
+        # Convert list to JSON string
         insert_data[3] = json.dumps(insert_data[3])
         insert_data[6] = json.dumps(insert_data[6])
-        logger.info(insert_data)
         try:
-            cursor.execute(insert_row, insert_data)
+            cursor.execute(db.INSERT_ROW, insert_data)
         except Exception as err:
             logger.exception(err)
 
