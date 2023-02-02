@@ -1,0 +1,12 @@
+[tool.black]
+line-length = 79
+
+[tool.isort]
+line_length = 79
+import_heading_future = "Future library"
+import_heading_stdlib = "Standard library"
+import_heading_thirdparty = "Third-party"
+import_heading_firstparty = "First-party"
+import_heading_localfolder = "Relative"
+
+[tool.ruff]
