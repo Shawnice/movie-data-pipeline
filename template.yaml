@@ -1,0 +1,104 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  movie-etl-pipeline
+
+  SAM Template for movie-etl-pipeline
+
+Globals:
+  Function:
+    Timeout: 15
+    Tracing: Active
+  Api:
+    TracingEnabled: true
+Parameters:
+  BucketName:
+    Type: String
+    Description: 'my-s3-bucket'
+  LambdaSecurityGroup:
+    Description: "Lambda security group ID"
+    Type: AWS::EC2::SecurityGroup::Id
+  LambdaSubnets:
+    Description: "Lambda subnets"
+    Type: List<AWS::EC2::Subnet::Id>
+  DBHost:
+    Type: String
+    Description: "Database endpoint"
+  DBName:
+    Type: String
+    NoEcho: true
+    Description: "Database name"
+  DBUser:
+    Type: String
+    NoEcho: true
+    Description: "Username for database access"
+  SecretName:
+    Type: String
+    NoEcho: true
+    Description: "Secret name for accesing database password"
+  IsProduction:
+    Type: String
+    Description: false
+
+
+Resources:
+  ReadIMDBFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: src
+      Handler: imdb.lambda_handler
+      Runtime: python3.9
+      Architectures:
+        - x86_64
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds: !Ref LambdaSubnets
+      Environment:
+        Variables:
+          DBHost: !Ref DBHost
+          DBUser: !Ref DBUser
+          DBName: !Ref DBName
+          SecretName: !Ref SecretName
+          IsProduction: !Ref IsProduction
+      Events:
+        S3Event:
+          Type: S3
+          Properties:
+            Bucket:
+              Ref: S3Bucket
+            Events: s3:ObjectCreated:*
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref BucketName
+      NotificationConfiguration:
+        EventBridgeConfiguration:
+          EventBridgeEnabled: true
+  ApplicationResourceGroup:
+    Type: AWS::ResourceGroups::Group
+    Properties:
+      Name:
+        Fn::Join:
+          - ''
+          - - ApplicationInsights-SAM-
+            - Ref: AWS::StackName
+      ResourceQuery:
+        Type: CLOUDFORMATION_STACK_1_0
+  ApplicationInsightsMonitoring:
+    Type: AWS::ApplicationInsights::Application
+    Properties:
+      ResourceGroupName:
+        Fn::Join:
+          - ''
+          - - ApplicationInsights-SAM-
+            - Ref: AWS::StackName
+      AutoConfigurationEnabled: 'true'
+    DependsOn: ApplicationResourceGroup
+Outputs:
+  ReadIMDBFunction:
+    Description: Read IMDB Lambda Function ARN
+    Value: !GetAtt ReadIMDBFunction.Arn
+  ReadIMDBFunctionIamRole:
+    Description: Implicit IAM Role created for Read IMDB function
+    Value: !GetAtt ReadIMDBFunctionRole.Arn
