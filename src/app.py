@@ -13,7 +13,6 @@ import pandas as pd
 import pymysql
 from botocore.exceptions import ClientError
 
-
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 S3Event = dict[str, Any]
@@ -66,8 +65,8 @@ if IS_PRODUCTION:
     DB_USER = secret["username"]
     DB_PASSWORD = secret["password"]
 else:
-    DB_USER = os.environ["DBUser"]
-    DB_PASSWORD = os.environ["DBPassword"]
+    DB_USER = os.environ.get("DBUser", "")
+    DB_PASSWORD = os.environ.get("DBPassword", "")
 
 s3 = boto3.client("s3")
 
@@ -81,7 +80,7 @@ def get_imdb_data(event: S3Event) -> str:
     try:
         response = s3.get_object(Bucket=bucket, Key=key)
         return response["Body"].read().decode("utf-8")
-    except Exception as err:
+    except ClientError as err:
         logger.error(
             "Can not fetch object {} from bucket {}. Error: {}".format(
                 key, bucket, err

@@ -11,7 +11,7 @@ import_heading_localfolder = "Relative"
 
 [tool.ruff]
 line-length = 79
-select =[
+select = [
     # flake8-builtins
     "A",
     # flake8-annotations
@@ -42,5 +42,11 @@ select =[
     "UP",
     # pycodestyle
     "W"
+]
+
+[tool.ruff.per-file-ignores]
+"test*.py" = [
+    # Use of `assert` detected
+    "S101"
 ]
 

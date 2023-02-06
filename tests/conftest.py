@@ -1,9 +1,10 @@
 """Fixtures for `src`."""
 
+# Third-party
 import pytest
 
 
-@pytest.fixture
+@pytest.fixture()
 def s3_event() -> dict[str, object]:
     """Return a sample S3 event."""
     return {
@@ -21,7 +22,7 @@ def s3_event() -> dict[str, object]:
                         "arn": "arn:aws:s3:::movie-source-data-bucket",
                     },
                     "object": {
-                        "key": "imdb/imdb_data.json",
+                        "key": "imdb_data.json",
                     },
                 },
             }
