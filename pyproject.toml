@@ -10,3 +10,37 @@ import_heading_firstparty = "First-party"
 import_heading_localfolder = "Relative"
 
 [tool.ruff]
+line-length = 79
+select =[
+    # flake8-builtins
+    "A",
+    # flake8-annotations
+    "ANN",
+    # flake8-bugbear
+    "B",
+    # flake8-comprehensions
+    "C4",
+    # mccabe
+    "C90",
+    # pydocstyle
+    "D",
+    # pycodestyle
+    "E",
+    # Pyflakes
+    "F",
+    # isort
+    "I",
+    # pep8-naming
+    "N",
+    # flake8-pytest-style
+    "PT",
+    # flake8-return
+    "RET",
+    # flake8-bandit
+    "S",
+    # pyupgrade
+    "UP",
+    # pycodestyle
+    "W"
+]
+
