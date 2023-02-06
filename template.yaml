@@ -14,41 +14,49 @@ Globals:
 Parameters:
   BucketName:
     Type: String
-    Description: 'my-s3-bucket'
+    Description: "Bucket name for storing movie data"
   LambdaSecurityGroup:
-    Description: "sg-074dfca90d1fdb62a"
     Type: AWS::EC2::SecurityGroup::Id
+    Description: "Security group for Lambda function"
   LambdaSubnets:
-    Description: "subnet-0ee4b361399f6b30b,subnet-0a38d755b7195f484,subnet-063a0d0f1c8abbf99,subnet-0ae1b01a8760b0d1c,subnet-08533679861c85d45,subnet-0f5ba84040f53f843"
     Type: List<AWS::EC2::Subnet::Id>
+    Description: "Subnets for Lambda function"
   DBHost:
     Type: String
-    Description: "movie-data.cnvfjdzzndrw.us-east-1.rds.amazonaws.com"
+    Description: "Hostname of database"
   DBName:
     Type: String
-    NoEcho: true
-    Description: "movie-data"
+    Description: "Database name"
   DBUser:
     Type: String
+    Description: "Username for the database"
+  DBPassword:
+    Type: String
     NoEcho: true
-    Description: "Username for database access"
+    Description: "Password for the database"
   DBSecretName:
     Type: String
     NoEcho: true
     Description: "Secret name for accessing database password"
   IsProduction:
     Type: String
-    Description: false
+    Default: false
 
 
 Resources:
   ReadIMDBFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
-      Handler: src.app.lambda_imdb
+      CodeUri: ./src
+      Handler: app.lambda_imdb
       Runtime: python3.9
       Architectures:
         - x86_64
+      Policies:
+        - S3FullAccessPolicy:
+            BucketName: !Ref BucketName
+        - AWSSecretsManagerGetSecretValuePolicy:
+            SecretArn: arn:aws:secretsmanager:us-east-1:523284507138:secret:rds!db-b5a89a5a-fde7-4f5f-998a-c4a75092ebc5-syvQKY
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
@@ -56,24 +64,41 @@ Resources:
       Environment:
         Variables:
           DBHost: !Ref DBHost
-          DBUser: !Ref DBUser
           DBName: !Ref DBName
+          DBUser: !Ref DBUser
+          DBPassword: !Ref DBPassword
           DBSecretName: !Ref DBSecretName
           IsProduction: !Ref IsProduction
       Events:
         S3Event:
           Type: S3
           Properties:
-            Bucket:
-              Ref: S3Bucket
+            Bucket: !Ref S3Bucket
             Events: s3:ObjectCreated:*
   S3Bucket:
     Type: AWS::S3::Bucket
     Properties:
       BucketName: !Ref BucketName
-      NotificationConfiguration:
-        EventBridgeConfiguration:
-          EventBridgeEnabled: true
+  S3VPCEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      RouteTableIds:
+        - rtb-05d2320144ca39116
+      ServiceName: com.amazonaws.us-east-1.s3
+      VpcEndpointType: Gateway
+      VpcId: vpc-0ddaeaf84380db691
+  SecretManagerVPCEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: com.amazonaws.us-east-1.secretsmanager
+      PrivateDnsEnabled: true
+      SecurityGroupIds:
+        - sg-09104729db7ba278d
+      SubnetIds:
+        - subnet-078e924f63f0e27d9
+        - subnet-016864cac24d7f1ed
+      VpcEndpointType: Interface
+      VpcId: vpc-0ddaeaf84380db691
   ApplicationResourceGroup:
     Type: AWS::ResourceGroups::Group
     Properties:

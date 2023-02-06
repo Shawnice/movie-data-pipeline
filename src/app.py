@@ -13,12 +13,30 @@ import pandas as pd
 import pymysql
 from botocore.exceptions import ClientError
 
-# First-party
-from src import db
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 S3Event = dict[str, Any]
+
+CREATE_TABLE = """
+CREATE TABLE IF NOT EXISTS imdb (
+    id                  int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    name                varchar(255),
+    rank_               int,
+    year                int,
+    genre               JSON,
+    director            varchar(120),
+    rating              float(4,2),
+    actors              JSON,
+    CONSTRAINT Unique_Movie UNIQUE(name, year, director)
+);"""
+
+INSERT_ROW = """
+INSERT INTO imdb (rank_, name, year, genre, director, rating, actors)
+VALUES (%s, %s, %s, %s, %s, %s, %s)
+ON DUPLICATE KEY UPDATE
+  id = id ;
+"""
 
 
 def get_secret(
@@ -42,13 +60,14 @@ IS_PRODUCTION = os.environ.get("IsProduction") == "true"
 DB_HOST = os.environ["DBHost"] if IS_PRODUCTION else "docker.for.mac.localhost"
 DB_NAME = os.environ["DBName"] if IS_PRODUCTION else "mysql"
 
+logger.info(f"{IS_PRODUCTION=}")
 if IS_PRODUCTION:
     secret = get_secret(os.environ["DBSecretName"])
     DB_USER = secret["username"]
     DB_PASSWORD = secret["password"]
 else:
-    DB_USER = "root"
-    DB_PASSWORD = "12345678"  # noqa: S105
+    DB_USER = os.environ["DBUser"]
+    DB_PASSWORD = os.environ["DBPassword"]
 
 s3 = boto3.client("s3")
 
@@ -86,13 +105,15 @@ def lambda_imdb(
     event: dict[str, object], context: dict[str, object]
 ) -> dict[str, object]:
     """Lambda function for loading `IMDB` data into database."""
+    logger.info("Get IMDB data...")
     imdb_data = get_imdb_data(event)
     df = pd.read_json(imdb_data, lines=True)
     df.rename(columns={"rank": "rank_"}, inplace=True)
 
     conn = get_mysql_conn()
+    logger.info(f"Connecting to {DB_HOST}")
     cursor = conn.cursor()
-    cursor.execute(db.CREATE_TABLE)
+    cursor.execute(CREATE_TABLE)
 
     for _, row in df.iterrows():
         insert_data = row.tolist()
@@ -100,7 +121,7 @@ def lambda_imdb(
         insert_data[3] = json.dumps(insert_data[3])
         insert_data[6] = json.dumps(insert_data[6])
         try:
-            cursor.execute(db.INSERT_ROW, insert_data)
+            cursor.execute(INSERT_ROW, insert_data)
         except Exception as err:
             logger.exception(err)
 
