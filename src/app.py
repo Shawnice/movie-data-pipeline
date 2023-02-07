@@ -56,8 +56,8 @@ def get_secret(
 
 
 IS_PRODUCTION = os.environ.get("IsProduction") == "true"
-DB_HOST = os.environ["DBHost"] if IS_PRODUCTION else "docker.for.mac.localhost"
-DB_NAME = os.environ["DBName"] if IS_PRODUCTION else "mysql"
+DB_HOST = os.environ["DBHost"]
+DB_NAME = os.environ["DBName"]
 
 logger.info(f"{IS_PRODUCTION=}")
 if IS_PRODUCTION:
