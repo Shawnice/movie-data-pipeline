@@ -41,6 +41,19 @@ Parameters:
   IsProduction:
     Type: String
     Default: false
+  SecretArn:
+    Type: String
+    Description: "ARN for Secret Manager"
+  VpcId:
+    Type: String
+    Description: "VPC ID of the Lambda function"
+  RouteTableIds:
+    Type: String
+    Description: "Route table ID for S3 Gateway endpoint"
+  S3VPCEndpointServiceName:
+    Type: String
+  SecretManagerVPCEndpointServiceName:
+    Type: String
 
 
 Resources:
@@ -56,7 +69,7 @@ Resources:
         - S3FullAccessPolicy:
             BucketName: !Ref BucketName
         - AWSSecretsManagerGetSecretValuePolicy:
-            SecretArn: arn:aws:secretsmanager:us-east-1:523284507138:secret:rds!db-b5a89a5a-fde7-4f5f-998a-c4a75092ebc5-syvQKY
+            SecretArn: !Ref SecretArn
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
@@ -83,22 +96,20 @@ Resources:
     Type: AWS::EC2::VPCEndpoint
     Properties:
       RouteTableIds:
-        - rtb-05d2320144ca39116
-      ServiceName: com.amazonaws.us-east-1.s3
+        - !Ref RouteTableIds
+      ServiceName: !Ref S3VPCEndpointServiceName
       VpcEndpointType: Gateway
-      VpcId: vpc-0ddaeaf84380db691
+      VpcId: !Ref VpcId
   SecretManagerVPCEndpoint:
     Type: AWS::EC2::VPCEndpoint
     Properties:
-      ServiceName: com.amazonaws.us-east-1.secretsmanager
+      ServiceName: !Ref SecretManagerVPCEndpointServiceName
       PrivateDnsEnabled: true
       SecurityGroupIds:
-        - sg-09104729db7ba278d
-      SubnetIds:
-        - subnet-078e924f63f0e27d9
-        - subnet-016864cac24d7f1ed
+        - !Ref LambdaSecurityGroup
+      SubnetIds: !Ref LambdaSubnets
       VpcEndpointType: Interface
-      VpcId: vpc-0ddaeaf84380db691
+      VpcId: !Ref VpcId
   ApplicationResourceGroup:
     Type: AWS::ResourceGroups::Group
     Properties:
