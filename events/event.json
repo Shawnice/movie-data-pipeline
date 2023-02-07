@@ -27,7 +27,7 @@
           "arn": "arn:aws:s3:::movie-source-data-bucket"
         },
         "object": {
-          "key": "imdb/imdb_data.json",
+          "key": "imdb_data.json",
           "size": 1024,
           "versionId": "version",
           "eTag": "d41d8cd98f00b204e9800998ecf8427e",
