@@ -6,9 +6,10 @@ Lambda function to process the dataset and store it to a AWS RDS(MySQL).
 
 ## Prerequisites
 
-1. Install AWS CLI
-2. Install AWS SAM CLI
-3. Install Docker
+1. Install [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
+2. Install [AWS SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html)
+3. Install [Docker](https://docs.docker.com/get-docker/)
+4. Install [MySQL](https://dev.mysql.com/doc/mysql-installation-excerpt/5.7/en/)
 
 ## How to run
 
