@@ -100,6 +100,9 @@ def get_mysql_conn() -> pymysql.connect:
     )
 
 
+conn = get_mysql_conn()
+
+
 def lambda_imdb(
     event: dict[str, object], context: dict[str, object]
 ) -> dict[str, object]:
@@ -109,7 +112,6 @@ def lambda_imdb(
     df = pd.read_json(imdb_data, lines=True)
     df.rename(columns={"rank": "rank_"}, inplace=True)
 
-    conn = get_mysql_conn()
     logger.info(f"Connecting to {DB_HOST}")
     cursor = conn.cursor()
     cursor.execute(CREATE_TABLE)
@@ -125,5 +127,4 @@ def lambda_imdb(
             logger.exception(err)
 
     conn.commit()
-    conn.close()
     return {"result": "Records inserted"}
