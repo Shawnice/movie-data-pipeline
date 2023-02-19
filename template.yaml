@@ -1,0 +1,138 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  movie-etl-pipeline
+
+  SAM Template for movie-etl-pipeline
+
+Globals:
+  Function:
+    Timeout: 15
+    Tracing: Active
+
+Parameters:
+  BucketName:
+    Type: String
+    Description: "Bucket name for storing movie data"
+  LambdaSecurityGroup:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: "Security group for Lambda function"
+  LambdaSubnets:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: "Subnets for Lambda function"
+  DBHost:
+    Type: String
+    Description: "Hostname of database"
+  DBName:
+    Type: String
+    Description: "Database name"
+  DBUser:
+    Type: String
+    Description: "Username for the database"
+  DBPassword:
+    Type: String
+    NoEcho: true
+    Description: "Password for the database"
+  DBSecretName:
+    Type: String
+    NoEcho: true
+    Description: "Secret name for accessing database password"
+  IsProduction:
+    Type: String
+    Default: false
+  SecretArn:
+    Type: String
+    Description: "ARN for Secret Manager"
+  VpcId:
+    Type: String
+    Description: "VPC ID of the Lambda function"
+  RouteTableIds:
+    Type: String
+    Description: "Route table ID for S3 Gateway endpoint"
+  S3VPCEndpointServiceName:
+    Type: String
+  SecretManagerVPCEndpointServiceName:
+    Type: String
+
+
+Resources:
+  ReadIMDBFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./src
+      Handler: app.lambda_imdb
+      Runtime: python3.9
+      Architectures:
+        - x86_64
+      Policies:
+        - S3FullAccessPolicy:
+            BucketName: !Ref BucketName
+        - AWSSecretsManagerGetSecretValuePolicy:
+            SecretArn: !Ref SecretArn
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds: !Ref LambdaSubnets
+      Environment:
+        Variables:
+          DBHost: !Ref DBHost
+          DBName: !Ref DBName
+          DBUser: !Ref DBUser
+          DBPassword: !Ref DBPassword
+          DBSecretName: !Ref DBSecretName
+          IsProduction: !Ref IsProduction
+      Events:
+        S3Event:
+          Type: S3
+          Properties:
+            Bucket: !Ref S3Bucket
+            Events: s3:ObjectCreated:*
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref BucketName
+  S3VPCEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      RouteTableIds:
+        - !Ref RouteTableIds
+      ServiceName: !Ref S3VPCEndpointServiceName
+      VpcEndpointType: Gateway
+      VpcId: !Ref VpcId
+  SecretManagerVPCEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      ServiceName: !Ref SecretManagerVPCEndpointServiceName
+      PrivateDnsEnabled: true
+      SecurityGroupIds:
+        - !Ref LambdaSecurityGroup
+      SubnetIds: !Ref LambdaSubnets
+      VpcEndpointType: Interface
+      VpcId: !Ref VpcId
+  ApplicationResourceGroup:
+    Type: AWS::ResourceGroups::Group
+    Properties:
+      Name:
+        Fn::Join:
+          - ''
+          - - ApplicationInsights-SAM-
+            - Ref: AWS::StackName
+      ResourceQuery:
+        Type: CLOUDFORMATION_STACK_1_0
+  ApplicationInsightsMonitoring:
+    Type: AWS::ApplicationInsights::Application
+    Properties:
+      ResourceGroupName:
+        Fn::Join:
+          - ''
+          - - ApplicationInsights-SAM-
+            - Ref: AWS::StackName
+      AutoConfigurationEnabled: 'true'
+    DependsOn: ApplicationResourceGroup
+Outputs:
+  ReadIMDBFunction:
+    Description: Read IMDB Lambda Function ARN
+    Value: !GetAtt ReadIMDBFunction.Arn
+  ReadIMDBFunctionIamRole:
+    Description: Implicit IAM Role created for Read IMDB function
+    Value: !GetAtt ReadIMDBFunctionRole.Arn

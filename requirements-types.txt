@@ -1,0 +1,4 @@
+boto3-stubs
+types-PyMySQL
+pandas-stubs
+types-mock
