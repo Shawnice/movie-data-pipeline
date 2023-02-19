@@ -1,19 +1,6 @@
 #!/usr/bin/env bash
 
-BucketName='<Bucket_Name_For_IMDB_Data>'
-LambdaSecurityGroup='<Security_Group_For_Lambda>'
-LambdaSubnets='<Subnets_for_Lambda>'
-DBHost='<Database_Host>'
-DBName='<Database_Name>'
-# If IsProduction=true, username and password will retrieve from Secret Manager
-DBUser='<Database_User>'
-DBPassword='<Database_Password>'
-DBSecretName='<Secret_Name_For_DB_Credential>'
-SecretArn='<Secret_Manager_ARN>'
-RouteTableIds='<Route_Table_Ids>'
-VpcId='<VPC_ID>'
-S3VPCEndpointServiceName='<S3_VPC_Endpoint_Service_Name>'
-SecretManagerVPCEndpointServiceName='<SM_VPC_Endpoint_Service_Name>'
+export $(xargs < env)
 # Options: true/false
 IsProduction='true'
 FUNCTION_NAME='ReadIMDBFunction'
