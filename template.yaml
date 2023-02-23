@@ -23,37 +23,35 @@ Parameters:
   DBHost:
     Type: String
     Description: "Hostname of database"
+    Default: "docker.for.mac.localhost"
   DBName:
     Type: String
     Description: "Database name"
+    Default: "mysql"
   DBUser:
     Type: String
+    NoEcho: true
     Description: "Username for the database"
+    Default: "root"
   DBPassword:
     Type: String
     NoEcho: true
     Description: "Password for the database"
-  DBSecretName:
-    Type: String
-    NoEcho: true
-    Description: "Secret name for accessing database password"
+    Default: "12345678"
   IsProduction:
     Type: String
     Default: false
-  SecretArn:
-    Type: String
-    Description: "ARN for Secret Manager"
+    AllowedValues: [true, false]
   VpcId:
     Type: String
     Description: "VPC ID of the Lambda function"
   RouteTableIds:
     Type: String
     Description: "Route table ID for S3 Gateway endpoint"
-  S3VPCEndpointServiceName:
-    Type: String
-  SecretManagerVPCEndpointServiceName:
-    Type: String
 
+Conditions:
+  ProductionEnvironment:
+    !Equals [!Ref IsProduction, 'true']
 
 Resources:
   ReadIMDBFunction:
@@ -68,18 +66,18 @@ Resources:
         - S3FullAccessPolicy:
             BucketName: !Ref BucketName
         - AWSSecretsManagerGetSecretValuePolicy:
-            SecretArn: !Ref SecretArn
+            SecretArn: !GetAtt MySQLDB.MasterUserSecret.SecretArn
       VpcConfig:
         SecurityGroupIds:
           - !Ref LambdaSecurityGroup
         SubnetIds: !Ref LambdaSubnets
       Environment:
         Variables:
-          DBHost: !Ref DBHost
+          DBHostname: !If [ProductionEnvironment, !GetAtt MySQLDB.Endpoint.Address, !Ref DBHost]
           DBName: !Ref DBName
           DBUser: !Ref DBUser
           DBPassword: !Ref DBPassword
-          DBSecretName: !Ref DBSecretName
+          SecretArn: !GetAtt MySQLDB.MasterUserSecret.SecretArn
           IsProduction: !Ref IsProduction
       Events:
         S3Event:
@@ -91,18 +89,29 @@ Resources:
     Type: AWS::S3::Bucket
     Properties:
       BucketName: !Ref BucketName
+  MySQLDB:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceClass: db.t2.micro
+      DBInstanceIdentifier: movie-db
+      AllocatedStorage: 20
+      DBName: movie_data
+      MasterUsername: !Ref DBUser
+      ManageMasterUserPassword: true
+      PubliclyAccessible: false
+      Engine: MySQL
   S3VPCEndpoint:
     Type: AWS::EC2::VPCEndpoint
     Properties:
       RouteTableIds:
         - !Ref RouteTableIds
-      ServiceName: !Ref S3VPCEndpointServiceName
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.s3'
       VpcEndpointType: Gateway
       VpcId: !Ref VpcId
   SecretManagerVPCEndpoint:
     Type: AWS::EC2::VPCEndpoint
     Properties:
-      ServiceName: !Ref SecretManagerVPCEndpointServiceName
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.secretsmanager'
       PrivateDnsEnabled: true
       SecurityGroupIds:
         - !Ref LambdaSecurityGroup
