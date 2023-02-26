@@ -39,7 +39,7 @@ ON DUPLICATE KEY UPDATE
 
 
 def get_secret(
-    secret_name: str, region_name: str = "us-east-1"
+    secret_name: str, region_name: str = "eu-west-2"
 ) -> dict[str, str]:
     """Get a secret from Secrets Manager."""
     session = boto3.session.Session()
@@ -56,17 +56,17 @@ def get_secret(
 
 
 IS_PRODUCTION = os.environ.get("IsProduction") == "true"
-DB_HOST = os.environ["DBHost"]
+# CloudFormation cannot judge conditional statements correctly,
+# so we have to set a default value here for locally test.
+DB_HOST = os.environ.get("DBHost", "docker.for.mac.localhost")
 DB_NAME = os.environ["DBName"]
+DB_USER = os.environ["DBUser"]
+DB_PASSWORD = os.environ["DBPassword"]
 
 logger.info(f"{IS_PRODUCTION=}")
 if IS_PRODUCTION:
-    secret = get_secret(os.environ["DBSecretName"])
-    DB_USER = secret["username"]
+    secret = get_secret(os.environ["SecretArn"])
     DB_PASSWORD = secret["password"]
-else:
-    DB_USER = os.environ.get("DBUser", "")
-    DB_PASSWORD = os.environ.get("DBPassword", "")
 
 s3 = boto3.client("s3")
 
@@ -91,6 +91,7 @@ def get_imdb_data(event: S3Event) -> str:
 
 def get_mysql_conn() -> pymysql.connect:
     """Return a `MySQL` connection."""
+    logger.info(f"{DB_HOST=}, {DB_NAME=}, {DB_USER=}, {DB_PASSWORD=}")
     return pymysql.connect(
         host=DB_HOST,
         user=DB_USER,
