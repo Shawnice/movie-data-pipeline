@@ -58,7 +58,7 @@ def get_secret(
 IS_PRODUCTION = os.environ.get("IsProduction") == "true"
 # CloudFormation cannot judge conditional statements correctly,
 # so we have to set a default value here for locally test.
-DB_HOST = os.environ.get("DBHost", "docker.for.mac.localhost")
+DB_HOST = os.environ["DBHost"] or "docker.for.mac.localhost"
 DB_NAME = os.environ["DBName"]
 DB_USER = os.environ["DBUser"]
 DB_PASSWORD = os.environ["DBPassword"]
@@ -91,7 +91,6 @@ def get_imdb_data(event: S3Event) -> str:
 
 def get_mysql_conn() -> pymysql.connect:
     """Return a `MySQL` connection."""
-    logger.info(f"{DB_HOST=}, {DB_NAME=}, {DB_USER=}, {DB_PASSWORD=}")
     return pymysql.connect(
         host=DB_HOST,
         user=DB_USER,

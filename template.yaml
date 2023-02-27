@@ -73,7 +73,7 @@ Resources:
         SubnetIds: !Ref LambdaSubnets
       Environment:
         Variables:
-          DBHostname: !If [ProductionEnvironment, !GetAtt MySQLDB.Endpoint.Address, !Ref DBHost]
+          DBHost: !If [ProductionEnvironment, !GetAtt MySQLDB.Endpoint.Address, !Ref DBHost]
           DBName: !Ref DBName
           DBUser: !Ref DBUser
           DBPassword: !Ref DBPassword
