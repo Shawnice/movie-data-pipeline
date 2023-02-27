@@ -2,7 +2,7 @@
 
 export $(xargs < env)
 # Options: true/false
-IsProduction='true'
+IsProduction='false'
 FUNCTION_NAME='ReadIMDBFunction'
 
 invoke_cmd="sam local invoke $FUNCTION_NAME -e events/event.json"
