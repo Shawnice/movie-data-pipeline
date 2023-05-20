@@ -65,7 +65,8 @@ DB_PASSWORD = os.environ["DBPassword"]
 
 logger.info(f"{IS_PRODUCTION=}")
 if IS_PRODUCTION:
-    secret = get_secret(os.environ["SecretArn"])
+    secret = get_secret(os.environ["SecretArn"], region_name="us-east-1")
+    DB_USER = secret["username"]
     DB_PASSWORD = secret["password"]
 
 s3 = boto3.client("s3")
