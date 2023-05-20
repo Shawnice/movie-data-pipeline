@@ -1,4 +1,2 @@
-pandas
-boto3
 pymysql
 cryptography
