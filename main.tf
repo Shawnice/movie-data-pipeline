@@ -8,7 +8,7 @@ locals {
   requirements_path = "./src/requirements.txt"
   build_path = "./build"
   dependencies_path = "./build/dependencies"
-  shared_requirements_path = "./build/shared/requirements.txt"
+  shared_requirements_path = "./src/requirements-shared.txt"
 }
 
 # IAM
@@ -116,6 +116,7 @@ resource "null_resource" "sam_metadata_pip_install" {
 
   provisioner "local-exec" {
     command = <<EOT
+      mkdir -p ${local.dependencies_path}
       rm -rf ${local.dependencies_path}
       pip install -r ${local.requirements_path} -t ${local.dependencies_path} \
       --platform manylinux2014_x86_64 --only-binary=:all: --implementation cp --upgrade
@@ -169,6 +170,7 @@ resource "null_resource" "shared_python_libs" {
 
   provisioner "local-exec" {
     command = <<EOT
+      mkdir -p "${local.build_path}/shared/python"
       pip install -r ${local.shared_requirements_path} -t ${local.build_path}/shared/python \
       --platform manylinux2014_x86_64 --only-binary=:all: --implementation cp --upgrade
     EOT
