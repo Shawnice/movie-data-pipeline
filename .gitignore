@@ -142,3 +142,8 @@ cython_debug/
 
 # Ruff
 .ruff_cache/
+
+# SAM/Terraform
+.aws-sam
+.aws-sam-iacs
+.terraform
