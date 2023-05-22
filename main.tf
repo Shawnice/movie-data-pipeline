@@ -170,7 +170,7 @@ resource "null_resource" "shared_python_libs" {
 
   provisioner "local-exec" {
     command = <<EOT
-      rm-rf "${local.build_path}/shared/python"
+      rm -rf "${local.build_path}/shared/python"
       mkdir -p "${local.build_path}/shared/python"
       pip install -r ${local.shared_requirements_path} -t ${local.build_path}/shared/python \
       --platform manylinux2014_x86_64 --only-binary=:all: --implementation cp --upgrade
