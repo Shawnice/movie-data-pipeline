@@ -163,8 +163,12 @@ resource "aws_lambda_function" "lambda_imdb" {
   }
 }
 
-resource "null_resource" "shared_python_libs" {
-  triggers = {
+resource "null_resource" "sam_metadata_shared_python_libs" {
+   triggers = {
+    resource_name = "aws_lambda_layer_version.shared_python_libs"
+    resource_type = "LAMBDA_LAYER"
+    original_source_code = "${local.build_path}/shared"
+    built_output_path = "${local.build_path}/shared"
     dependencies = filemd5(local.shared_requirements_path)
   }
 
@@ -178,18 +182,18 @@ resource "null_resource" "shared_python_libs" {
   }
 }
 
-data "archive_file" "shared_python_libs" {
+data "archive_file" "sam_metadata_shared_python_libs" {
   type        = "zip"
   source_dir  = "${local.build_path}/shared/"
   output_path = "${local.build_path}/lambda_layer_payload.zip"
-  depends_on = [null_resource.shared_python_libs]
+  depends_on = [null_resource.sam_metadata_shared_python_libs]
 }
 
 resource "aws_lambda_layer_version" "shared_python_libs" {
   filename   = "${local.build_path}/lambda_layer_payload.zip"
   layer_name = "shared_python_libs"
 
-  source_code_hash = data.archive_file.shared_python_libs.output_base64sha256
+  source_code_hash = data.archive_file.sam_metadata_shared_python_libs.output_base64sha256
 
   compatible_runtimes = ["python3.9"]
 }
